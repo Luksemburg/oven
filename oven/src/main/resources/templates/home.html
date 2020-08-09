@@ -5,6 +5,22 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 </head>
 <body>
-    <p th:text="'Hello, ' + ${name} + '!'" />
+    <!--	<p th:text="'Hello, ' + ${name} + '!'" />	-->
+	
+		
+	<form method="post" enctype="multipart/form-data">
+	 <div>
+	   <label for="source">Upload your base source</label>
+	   <input type="file" id="source" name="source" accept=".wav,.mp3" >
+	 </div>
+	 <div>
+	   <button>Generate!</button>
+	 </div>
+	</form>
+	
+	<div id="result">
+		<p>Get your result <a href="downlaodAnswer">download</a></p>
+	</div>
+	
 </body>
 </html>

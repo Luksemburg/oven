@@ -1,3 +1,7 @@
 com\beat\oven\init\OvenApplication.class
-com\beat\oven\init\ServletInitializer.class
+com\beat\oven\producer\ProduceMidi.class
+com\beat\oven\consumer\IConsumerable.class
+com\beat\oven\reactor\IThinkable.class
 com\beat\oven\controller\HomeController.class
+com\beat\oven\producer\IProducerable.class
+com\beat\oven\init\ServletInitializer.class
