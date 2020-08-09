@@ -1,2 +1,2 @@
 # oven
-Training project, tring build virtual composer with neurowebs
+Training project, trying build virtual composer with neurowebs
