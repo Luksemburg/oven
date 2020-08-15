@@ -1,5 +1,7 @@
 package com.beat.oven.producer;
 
+import com.beat.oven.producer.entity.Channel;
+
 public interface IProducerable {
-	void write();
+	void write(Channel channel);
 }
