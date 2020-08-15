@@ -3,6 +3,8 @@ package com.beat.oven.producer;
 import java.io.FileOutputStream;
 
 import com.beat.oven.producer.entity.Channel;
+import com.beat.oven.producer.entity.Chord;
+import com.beat.oven.producer.entity.Note;
 import com.beat.oven.producer.enums.Instrument;
 import com.beat.oven.producer.enums.Sys;
 
@@ -22,6 +24,8 @@ public class ProduceMidi implements IProducerable {
 	private  byte[] timeSignatureValue = {0x04, 0x02, 0x18, 0x08, 0x00};					//4/4 + 0x00
 	
 	private byte[] data;		
+	
+	private  int channelBytesLength = 24;		// init length
 	
 	
 	//MIDI_HEADER + FORMAT + numOfChannels + ticsInBeat + CHANNEL_HEADER + META_CHANNEL_LENGTH + Sys.TERMINATOR + Sys.TEMP_MARKER + 
@@ -52,18 +56,50 @@ public class ProduceMidi implements IProducerable {
 		pushToData(Sys.TERMINATOR_CHANNEL.val());
 		
 		pushToData(CHANNEL_HEADER);
+		int placeForChannelLength = data.length;
+		
 		pushToData(Sys.TERMINATOR.val());
 		pushToData(Instrument.FLUTE.val());
 		pushToData(Sys.TERMINATOR.val());
 		pushToData(Sys.TIME_SIGNATURE.val());
 		pushToData(timeSignatureValue);
 		
-		
+		//notes
+		for(Chord chord : channel.getChords()) {
+			
+			//take all notes in chord
+			for(Note note : chord.getNotes()) {
+				if(note.getDuration().length > 1){
+					pushToData(new byte[] {(byte) (Note.TAKE + channel.getNumber()), (byte)note.getPitch(), (byte)note.getVelocity(), (byte)note.getDuration()[0], (byte)note.getDuration()[1]});
+					channelBytesLength += 5;
+				}else{
+					pushToData(new byte[] {(byte) (Note.TAKE + channel.getNumber()), (byte)note.getPitch(), (byte)note.getVelocity(), (byte)note.getDuration()[0]});
+					channelBytesLength += 4;
+				}
+			}
+			
+			//release all notes in chord
+			for(Note note : chord.getNotes()) {
+				pushToData(new byte[] {(byte) (Note.RELEASE + channel.getNumber()), (byte)note.getPitch(), (byte)Note.RELEASE_TAIL[0], (byte)Note.RELEASE_TAIL[1]});
+				channelBytesLength += 4;
+			}
+		}
 		
 		pushToData(Sys.END.val());
 		
+		//calculate byte length (use only 2 bytes) 
+		// TODO check is calculation right		 
+		channelLength[0] = (byte) (channelBytesLength / (256 * 256 * 256));
+		int t = channelBytesLength % (256 * 256 * 256);
+		channelLength[1] = (byte)( t / (256 * 256));
+		int tt = t % (256 * 256);
+		channelLength[2] = (byte)(tt / 256);
+		channelLength[3] = (byte)(tt % 256);
 		
-		try (FileOutputStream fos = new FileOutputStream("D:\\FOO_CODE\\EclipseWorkSpace\\oven\\output.mid")) {		// TODO: move hard link to config	
+		injectLengthToData(channelLength, placeForChannelLength);
+		
+		
+		try (FileOutputStream fos = new FileOutputStream("D:\\FOO_CODE\\EclipseWorkSpace\\oven\\output.mid")) {		// TODO: move hard link to configuration file	
 		   fos.write(data);			   
 		}catch(Exception e){
 			e.printStackTrace();
@@ -79,6 +115,24 @@ public class ProduceMidi implements IProducerable {
 		
 		for(int i = 0; i < payload.length; i++){
 			result[data.length + i] = payload[i];
+		}
+		
+		data = result;
+	}
+	
+	private void injectLengthToData(byte[] payload, int index) {
+		byte[] result = new byte[data.length + payload.length];
+		
+		for(int i = 0; i < index; i++){
+			result[i] = data[i];
+		}
+		
+		for(int i = index, j = 0; j < payload.length; i++, j++){
+			result[i] = payload[j];
+		}
+		
+		for(int i = index; i < data.length; i++) {
+			result[i + payload.length] = data[i];
 		}
 		
 		data = result;
