@@ -7,7 +7,7 @@ public class Channel implements Serializable {
 	private static final long serialVersionUID = 2254562158L;
 	
 	private int number;
-	private Chord[] chords;
+	private Chord[] chords = new Chord[0];
 	
 	public Channel(int number){
 		this.number = number;

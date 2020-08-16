@@ -6,7 +6,7 @@ public class Chord implements Serializable {
 	
 	private static final long serialVersionUID = 100555684L;
 	
-	private Note[] notes;
+	private Note[] notes = new Note[0];
 	
 	public Note[] getNotes() {
 		return this.notes;

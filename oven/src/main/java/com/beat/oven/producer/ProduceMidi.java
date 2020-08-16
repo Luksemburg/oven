@@ -23,7 +23,7 @@ public class ProduceMidi implements IProducerable {
 	
 	private  byte[] timeSignatureValue = {0x04, 0x02, 0x18, 0x08, 0x00};					//4/4 + 0x00
 	
-	private byte[] data;		
+	private byte[] data = new byte[0];		
 	
 	private  int channelBytesLength = 24;		// init length
 	

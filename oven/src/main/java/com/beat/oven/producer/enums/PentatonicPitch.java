@@ -7,23 +7,24 @@ import java.util.Random;
 
 public enum PentatonicPitch {	
 	
-	// --- for violin minor pentatonic
-	G3((byte)0x37),
-	Ais3((byte)0x3A),	
-	C4((byte)0x46),
+	// --- for flute ONLY minor pentatonic
+	
+	C4((byte)0x3C),
 	D4((byte)0x3E),
-	F4((byte)0x43),
-	G4((byte)0x3C),	
-	Ais4((byte)0x41),
-	C5((byte)0x52),
+	F4((byte)0x41),
+	G4((byte)0x43),	
+	Ais4((byte)0x46),
+	C5((byte)0x48),
 	D5((byte)0x4A),
-	F5((byte)0x4F),
-	G5((byte)0x48),	
-	Ais5((byte)0x4D),
-	C6((byte)0x5B),
+	F5((byte)0x4D),
+	G5((byte)0x4F),	
+	Ais5((byte)0x52),
+	C6((byte)0x54),
 	D6((byte)0x56),	
 	F6((byte)0x59),
-	G6((byte)0x54),
+	G6((byte)0x5B),
+	Ais6((byte)0x5E),
+	C7((byte)0x60),
 	
 ;	
 	
