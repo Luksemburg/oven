@@ -1,8 +1,16 @@
 package com.beat.oven.network;
 
+import java.util.Random;
+
 public class LSTM_Cell implements ICell {
 	
+	private float minWeightInit = 0.0f;
+	private float maxWeightInit = 2.0f;
+	
 	private int vector_size;
+	
+	private float oldCondition[];		// C t-1
+	private float oldOutput[];			// h t-1
 	
 	private float input[];			// X
 	private float condition[];		// C
@@ -41,6 +49,8 @@ public class LSTM_Cell implements ICell {
 		super();
 		this.vector_size = size;
 		
+		Random random = new Random();
+		
 		input = new float[size];
 		output = new float[size];
 		condition = new float[size];
@@ -55,12 +65,29 @@ public class LSTM_Cell implements ICell {
 		tanhU = new float[size];
 		
 		outW = new float[size];
-		outU = new float[size];
+		outU = new float[size];					
 		
 		forgetBias = new float[size];
 		inputBias = new float[size];
 		tanhBias = new float[size];		
 		outBias = new float[size];
+		
+		//Init
+		for(int i = 0; i < size; i++) {
+			forgetW[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
+			forgetU[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
+			inW[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
+			inU[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
+			tanhW[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
+			tanhU[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
+			outW[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
+			outU[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
+			
+			forgetBias[i] = 0.0f;
+			inputBias[i] = 0.0f;
+			tanhBias[i] = 0.0f;
+			outBias[i] = 0.0f;
+		}
 		
 		forgetLearnRate = new float[size];
 		inputLearnRate = new float[size];
@@ -99,20 +126,63 @@ public class LSTM_Cell implements ICell {
 		
 		return result;
 	}
+	
+	@Override
+	public void setOldOutput(float[] oldOutput) {		
+		this.oldOutput = oldOutput;
+	}
+	
+	@Override
+	public void setOldCondition(float[] oldCondition) {
+		this.oldCondition = oldCondition;
+	}
 
 	@Override
-	public float[] output() {
-		// TODO Auto-generated method stub
+	public float[] output() {		
 		return output;
 	}
 
 	@Override
-	public void input(float[] data) {
-		// TODO Auto-generated method stub
+	public void input(float[] data) {		
 		input = data;
 	} 
 	
-	//TODO sigmoid, tanh functions and their derivatives
+	@Override
+	public void work() {		
+		//TODO main calculations	
+		
+		float[] forgetRes = new float[vector_size];
+		float[] inRes = new float[vector_size];
+		float[] tanhRes = new float[vector_size];
+		float[] outRes = new float[vector_size];
+		
+		float[] forgetArg = new float[vector_size];
+		float[] inArg = new float[vector_size];
+		float[] tanhArg = new float[vector_size];
+		float[] outArg = new float[vector_size];
+		
+		for(int i = 0; i < vector_size; i++) {
+			forgetArg[i] = forgetW[i] * input[i] + forgetU[i] * oldOutput[i] + forgetBias[i]; 
+			inArg[i] = inW[i] * input[i] + inU[i] * oldOutput[i] + inputBias[i]; 
+			tanhArg[i] = tanhW[i] * input[i] + tanhU[i] * oldOutput[i] + tanhBias[i];
+			outArg[i] = outW[i] * input[i] + outU[i] * oldOutput[i] + outBias[i];
+		}
+		
+		forgetRes = sigmoid(forgetArg);
+		inRes = sigmoid(inArg);
+		tanhRes = tanh(tanhArg);
+		outRes = sigmoid(outArg);
+		
+		condition = elementSumm(hadamardOperator(tanhRes, inRes), hadamardOperator(forgetRes, oldCondition));
+		output = hadamardOperator(tanh(condition), outRes);
+	}
+	
+	@Override
+	public float[] condition() {
+		return condition;
+	}
+	
+	//sigmoid, tanh functions and their derivatives
 	private static float[] sigmoid(float[] data) {
 		float[] result = new float[data.length];
 		for(int i = 0; i < data.length; i++) {
