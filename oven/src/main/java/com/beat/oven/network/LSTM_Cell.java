@@ -4,46 +4,84 @@ import java.util.Random;
 
 public class LSTM_Cell implements ICell {
 	
+	public final static float STUB = 0.0f;
+	
 	private float minWeightInit = 0.0f;
 	private float maxWeightInit = 2.0f;
 	
+	private float learnRate = 0.1f;
+	
 	private int vector_size;
 	
-	private float oldCondition[];		// C t-1
+	private float oldState[];		// C t-1
 	private float oldOutput[];			// h t-1
 	
 	private float input[];			// X
-	private float condition[];		// C
+	private float state[];		// C
 	private float output[];			// h
 	
-	private float forgetW[];		// sigma 1st layer weight for input vector
-	private float forgetU[];		// sigma 1st layer weight for memory h_t-1 previous cell
+	private float F_W[];		// sigma 1st layer weight for input vector
+	private float I_W[];			// sigma 2st layer weight for input vector
+	private float A_W[];			//tanh layer weight for input vector
+	private float O_W[];			// sigma 4st layer weight for input vector
 	
-	private float inW[];			// sigma 2st layer weight for input vector
-	private float inU[];			// sigma 2st layer weight for memory h_t-1 previous cell
-	
-	private float tanhW[];			//tanh layer weight for input vector
-	private float tanhU[];			//tanh layer weight for memory h_t-1 previous cell
-	
-	private float outW[];			// sigma 4st layer weight for input vector
-	private float outU[];			// sigma 4st layer weight for memory h_t-1 previous cell	
+	private float F_U[];		// sigma 1st layer weight for memory h_t-1 previous cell		
+	private float I_U[];			// sigma 2st layer weight for memory h_t-1 previous cell		
+	private float A_U[];			//tanh layer weight for memory h_t-1 previous cell		
+	private float O_U[];			// sigma 4st layer weight for memory h_t-1 previous cell	
 	
 	
-	private float forgetBias[];			// f_t
-	private float inputBias[];			// i_t
-	private float tanhBias[];			// C_t
-	private float outBias[];			// o_t
+	private float F_Bias[];			// f_t
+	private float I_Bias[];			// i_t
+	private float A_Bias[];			// a_t
+	private float O_Bias[];			// o_t
 	
-	private float forgetLearnRate[];			// f_t
-	private float inputLearnRate[];				// i_t
-	private float tanhLearnRate[];				// C_t
-	private float outLearnRate[];				// o_t
+	private float F_LearnRate[];			// f_t
+	private float I_LearnRate[];				// i_t
+	private float A_LearnRate[];				// a_t
+	private float O_LearnRate[];				// o_t
 	
-	private float forgetMoment[];			// f_t
-	private float inputMoment[];			// i_t
-	private float tanhMoment[];				// C_t
-	private float outMoment[];				// o_t
+	private float F_Moment[];			// f_t
+	private float I_Moment[];			// i_t
+	private float A_Moment[];				// a_t
+	private float O_Moment[];				// o_t
 	
+	
+	//deltas
+	// TODO init at constructor
+	private float deltaOut[];
+	private float deltaT[];
+	private float deltaState[];
+	
+	private float deltaF_Gate[];
+	private float deltaI_Gate[];
+	private float deltaA_Gate[];
+	private float deltaO_Gate[];
+	
+	private float deltaX[];
+	
+	private float deltaF_W[];		
+	private float deltaI_W[];			
+	private float deltaA_W[];			
+	private float deltaO_W[];			
+	
+	private float deltaF_U[];				
+	private float deltaI_U[];					
+	private float deltaA_U[];				
+	private float deltaO_U[];				
+	
+	private float deltaF_Bias[];			
+	private float deltaI_Bias[];			
+	private float deltaA_Bias[];			
+	private float deltaO_Bias[];			
+	
+	private float deltaAllFutureGates[][];			//	order: F (forget), I (input), A (activation), O (output)
+	
+	private float pastDeltaOut[];
+	private float futureDeltaOut[];
+	
+	private float futureState[];
+	private float futureForget[];		
 	
 	public LSTM_Cell(int size) {
 		super();
@@ -53,78 +91,68 @@ public class LSTM_Cell implements ICell {
 		
 		input = new float[size];
 		output = new float[size];
-		condition = new float[size];
+		state = new float[size];
 		
-		forgetW = new float[size];
-		forgetU = new float[size];
+		F_W = new float[size];
+		I_W = new float[size];
+		A_W = new float[size];
+		O_W = new float[size];
 		
-		inW = new float[size];
-		inU = new float[size];
+		F_U = new float[size];				
+		I_U = new float[size];				
+		A_U = new float[size];				
+		O_U = new float[size];					
 		
-		tanhW = new float[size];
-		tanhU = new float[size];
-		
-		outW = new float[size];
-		outU = new float[size];					
-		
-		forgetBias = new float[size];
-		inputBias = new float[size];
-		tanhBias = new float[size];		
-		outBias = new float[size];
+		F_Bias = new float[size];
+		I_Bias = new float[size];
+		A_Bias = new float[size];		
+		O_Bias = new float[size];
 		
 		//Init
 		for(int i = 0; i < size; i++) {
-			forgetW[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
-			forgetU[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
-			inW[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
-			inU[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
-			tanhW[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
-			tanhU[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
-			outW[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
-			outU[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
+			F_W[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
+			I_W[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
+			A_W[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
+			O_W[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
 			
-			forgetBias[i] = 0.0f;
-			inputBias[i] = 0.0f;
-			tanhBias[i] = 0.0f;
-			outBias[i] = 0.0f;
+			F_U[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;			
+			I_U[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;			
+			A_U[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;			
+			O_U[i] = random.nextFloat() * (maxWeightInit - minWeightInit) + minWeightInit;
+			
+			F_Bias[i] = 0.0f;
+			I_Bias[i] = 0.0f;
+			A_Bias[i] = 0.0f;
+			O_Bias[i] = 0.0f;
 		}
 		
-		forgetLearnRate = new float[size];
-		inputLearnRate = new float[size];
-		tanhLearnRate = new float[size];		
-		outLearnRate = new float[size];
+		F_LearnRate = new float[size];
+		I_LearnRate = new float[size];
+		A_LearnRate = new float[size];		
+		O_LearnRate = new float[size];
 		
-		forgetMoment = new float[size];
-		inputMoment = new float[size];
-		tanhMoment = new float[size];		
-		outMoment = new float[size];
+		F_Moment = new float[size];
+		I_Moment = new float[size];
+		A_Moment = new float[size];		
+		O_Moment = new float[size];
 	}
 	
 	
-	private static float[] hadamardOperator(float[] x, float[] y) {				//element-wise multiplication
-		if(x.length != y.length) {
-			throw new ArithmeticException("Invalid Size Arrays");
-		}
-		float[] result = new float[x.length];
-		
-		for(int i = 0; i < result.length; i++) {
-			result[i] = x[i] * y[i];
-		}
-		
-		return result;
-	} 
 	
-	private static float[] elementSumm(float[] x, float[] y) {				//element-wise addition
-		if(x.length != y.length) {
-			throw new ArithmeticException("Invalid Size Arrays");
-		}
-		float[] result = new float[x.length];
-		
-		for(int i = 0; i < result.length; i++) {
-			result[i] = x[i] + y[i];
-		}
-		
-		return result;
+	public float[] getPastDeltaOut() {
+		return pastDeltaOut;
+	}
+	
+	public void setFutureDeltaOut(float[] futureDeltaOut) {
+		this.futureDeltaOut = futureDeltaOut;
+	}
+	
+	public void setFutureState(float[] futureState) {
+		this.futureState = futureState;
+	}
+	
+	public void setFutureForget(float[] futureForget) {
+		this.futureForget = futureForget;
 	}
 	
 	@Override
@@ -133,8 +161,8 @@ public class LSTM_Cell implements ICell {
 	}
 	
 	@Override
-	public void setOldCondition(float[] oldCondition) {
-		this.oldCondition = oldCondition;
+	public void setOldState(float[] oldState) {
+		this.oldState = oldState;
 	}
 
 	@Override
@@ -148,8 +176,12 @@ public class LSTM_Cell implements ICell {
 	} 
 	
 	@Override
-	public void work() {		
-		//TODO main calculations	
+	public float[] state() {
+		return state;
+	}
+	
+	@Override
+	public void work() {				
 		
 		float[] forgetRes = new float[vector_size];
 		float[] inRes = new float[vector_size];
@@ -162,10 +194,10 @@ public class LSTM_Cell implements ICell {
 		float[] outArg = new float[vector_size];
 		
 		for(int i = 0; i < vector_size; i++) {
-			forgetArg[i] = forgetW[i] * input[i] + forgetU[i] * oldOutput[i] + forgetBias[i]; 
-			inArg[i] = inW[i] * input[i] + inU[i] * oldOutput[i] + inputBias[i]; 
-			tanhArg[i] = tanhW[i] * input[i] + tanhU[i] * oldOutput[i] + tanhBias[i];
-			outArg[i] = outW[i] * input[i] + outU[i] * oldOutput[i] + outBias[i];
+			forgetArg[i] = F_W[i] * input[i] + F_U[i] * oldOutput[i] + F_Bias[i]; 
+			inArg[i] = I_W[i] * input[i] + I_U[i] * oldOutput[i] + I_Bias[i]; 
+			tanhArg[i] = A_W[i] * input[i] + A_U[i] * oldOutput[i] + A_Bias[i];
+			outArg[i] = O_W[i] * input[i] + O_U[i] * oldOutput[i] + O_Bias[i];
 		}
 		
 		forgetRes = sigmoid(forgetArg);
@@ -173,13 +205,8 @@ public class LSTM_Cell implements ICell {
 		tanhRes = tanh(tanhArg);
 		outRes = sigmoid(outArg);
 		
-		condition = elementSumm(hadamardOperator(tanhRes, inRes), hadamardOperator(forgetRes, oldCondition));
-		output = hadamardOperator(tanh(condition), outRes);
-	}
-	
-	@Override
-	public float[] condition() {
-		return condition;
+		state = elementSumm(hadamardOperator(tanhRes, inRes), hadamardOperator(forgetRes, oldState));
+		output = hadamardOperator(tanh(state), outRes);
 	}
 	
 	//sigmoid, tanh functions and their derivatives
@@ -212,6 +239,32 @@ public class LSTM_Cell implements ICell {
 		for(int i = 0; i < data.length; i++) {
 			result[i] = (float) (1 - Math.pow(data[i], 2));
 		}
+		return result;
+	}
+	
+	private static float[] hadamardOperator(float[] x, float[] y) {				//element-wise multiplication
+		if(x.length != y.length) {
+			throw new ArithmeticException("Invalid Size Arrays");
+		}
+		float[] result = new float[x.length];
+		
+		for(int i = 0; i < result.length; i++) {
+			result[i] = x[i] * y[i];
+		}
+		
+		return result;
+	} 
+	
+	private static float[] elementSumm(float[] x, float[] y) {				//element-wise addition
+		if(x.length != y.length) {
+			throw new ArithmeticException("Invalid Size Arrays");
+		}
+		float[] result = new float[x.length];
+		
+		for(int i = 0; i < result.length; i++) {
+			result[i] = x[i] + y[i];
+		}
+		
 		return result;
 	}
 }
